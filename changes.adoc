@@ -1,0 +1,7 @@
+== Revision history
+
+Changes from v1.0-draft1 to v1.0-draft2:
+
+* Changed controlling CSR to `menvcfg`, `henvcfg`, and `senvcfg`.
+* Added clarifying language to how the `DTSO`-bit in lower priority level envcfg CSRs is partially overriden.
+* Improved language and fixed typos.

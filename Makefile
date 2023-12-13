@@ -12,14 +12,15 @@
 # This Makefile is designed to automate the process of building and packaging 
 # the Doc Template for RISC-V Extensions.
 
+SPEC=riscv-ssdtso
 DATE ?= $(shell date +%Y-%m-%d)
-VERSION ?= v0.0.0
+VERSION ?= $(shell git describe --tag --always --dirty)
 REVMARK ?= Draft
 DOCKER_RUN := docker run --rm -v ${PWD}:/build -w /build \
 riscvintl/riscv-docs-base-container-image:latest
 
 HEADER_SOURCE := header.adoc
-PDF_RESULT := spec-sample.pdf
+PDF_RESULT := $(SPEC)-$(VERSION).pdf
 
 ASCIIDOCTOR_PDF := asciidoctor-pdf
 OPTIONS := --trace \

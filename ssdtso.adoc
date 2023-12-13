@@ -1,0 +1,114 @@
+[[ssdtso]]
+== Dynamic switching of RVTSO
+
+The Ssdtso extension adds a 'dynamic-RVTSO' mode of operation.
+It is supported only on implementations that default to RVWMO semantics.
+
+Software executing at a higher privilege level (refer to Chapter 9.1 "Privilege Modes" in the RISC-V Provileged Architecture for the applicable definition in the presence of the H extension) can enable dynamic-RVTSO for all lower privilege levels on a per-hart granularity.
+Ssdtso does not control the memory ordering of M-mode: M-mode software always executes in RVWMO mode when the Ssdtso extension is implemented.
+
+[NOTE]
+====
+Ssdtso is intended to provide a compatibility-mode to execute binaries that require RVTSO on processors that prefer (e.g., for performance reasons) to be operated in RVWMO mode.
+====
+
+The intended use-cases for Ssdtso are
+
+. the execution of individual binaries compiled for RVTSO in user-mode or virtualized user-mode on a processor otherwise operating in RVWMO;
+. the execution of operating system images compiled for RVTSO mode in supervisor- and user-mode on a processor otherwise operating in RVWMO; and
+. the execution of guest operating system images compiled for RVTSO mode in virtualized supoervisor- and virtualized user-mode on a processors otherwise operating in RVWMO.
+
+=== Dependencies and Incompatibilities
+
+The Ssdto extension conflicts with Ztso.
+
+[NOTE]
+====
+Ztso provides RVTSO semantics across all privilege levels and harts of an implementation.
+In contrast to this, Ssdtso assumes that RVWMO is the default (at boot) mode of operation, that individual harts can be switched to RVTSO, and that the M-mode execution environment can not switched to RVTSO.
+====
+
+[NOTE]
+====
+It is strongly recommended (but not required) to implement the A extension for synchronization between software executing in RVWMO mode and RVTSO mode (such as S-mode software executing in RVWMO mode and user-space processes executing under dynamic-RVTSO).
+
+To allow the free composition of extensions for unforeseen use-cases, no formal dependency is introduced and any such mandate is delegated to ISA Profiles or Platforms definition.
+====
+
+=== State controlling whether dynamic TSO is enabled
+
+The dynamic-RVTSO behaviour is controlled by bit 8 (`DTSO`) of `menvcfg, senvcfg, henvcfg` for all lower privilege levels.
+Implementations providing Ssdtso are required to default to RVWMO semantics: the bits controlling dynamic-RVTSO behaviour are initialized to 0 on reset.
+
+If the DTSO control bit in the respective envcfg is set, all lower-privilege modes will operate in dynamic-RVTSO mode:
+[cols="^3,^2,^1,^1,^1,^1,^1",stripes=even,options="header"]
+|===
+1+|DTSO-bit |Virtualization state 5+|Controls dynamic-RVTSO in modes
+|||M|S/HS|U|VS|VU
+|menvcfg|n/a|0|1|1|1|1
+|henvcfg|n/a|0|0|0|1|1
+|senvcfg|V=0|0|0|1|0|0
+|senvcfg|V=1|0|0|0|0|1
+|===
+
+Attempt to reset the DTSO control bit at a lower priority level are ignored, if a higher-privilege mode has enabled dynamic-TSO according as follows:
+
+* menvcfg.DTSO overrides henvcfg.DTSO and senvcfg.DTSO
+* henvcfg.DTSO overrides senvcfg.DTSO for V=1
+
+=== Interpretation of memory-operations in dynamic-RVTSO
+
+While executing instructions in dynamic-RVTSO mode, all unannotated memory instructions are interpreted as if they had an acquire/release annotation.
+Entering and leaving dynamic-RVTSO mode affects memory instructions at the lower privilege levels that are encountered in program-order after the write to the CSR controlling the dynamic-RVTSO behaviour.
+
+Different harts in a system may operate in different modes.
+
+== Software considerations (informative)
+
+=== Switching to dynamic-RVTSO mode
+
+Depending on the capabilities of the software runtime environment (e.g., whether an operating system is present, and whether dynamically linked executables are supported), dynamic-RVTSO mode can be entered on processes initialisation or (programatically) during process runtime:
+
+* on process-initialisation from the ELF loader (e.g., for statically linked executables that have the *TSO* field in *e_flags* in the ELF file header set), or
+* at runtime using a system-call (e.g., if a runtime-linker resolves a DSO that has the *TSO* field in *e_flags* in the ELF file header set).
+
+Operating systems may follow various implementation strategies to enable dynamic-RVTSO in the presence of processes that require RVTSO semantics:
+
+. on-demand switching of individual harts for the duration of individual process that require RVTSO semantics for the duration of the execution on those harts
+. enabling dynamic-RVTSO across all harts as long as RVTSO processes are present in the system
+. enabling dynamic-RVTSO across all harts after encountering the first process requiring RVTSO
+
+[NOTE]
+====
+While the Ssdtso specification was written to support on-demand switching of individual harts into dynamic-RVTSO mode, it does not prescribe a specific strategy for how the operating system handles the presence of processes requiring RVTSO semantics.
+
+However, the expectation of the specification architects is that an operating system would attempt to reduce the overall time that cores would spend in dynamic-RVTSO mode.
+====
+
+=== Impact on thread/task state
+
+For operating systems that use on-demand switching of individual harts, the thread/task structures will require an additional field to track the requirement to execute in dynamic-RVTSO mode.
+
+=== Runtime linker support
+
+Support for shared objects will require runtime linker support which (roughly) follows the following process:
+
+* The capability to support Ssdtso is detected via an OS specific discovery method (e.g., `riscv_hwprobe` with `RISCV_HWPROVE_EXT_SSDTSO` key on Linux).
+* The ELF flags on each resolved shared object are evaluated to determine if RVTSO is required.  In case that RVTSO is required, but neither Ztso nor Ssdtso are available, the runtime linker is expected to invoke appropriate error handling and reporting.
+* If shared object is loaded into the process that requires RVTSO and Ssdtso in implemented, the runtime linker signals the OS to enter dynamic-TSO mode via an OS specific interface (e.g., on Linux: using a `prctl(...)` call).
+
+[NOTE]
+====
+It is recommended to only signal the need to enter dynamic-RVTSO mode once per process to reduce the number of systemcalls in consideration of performance.
+Given that entering dynamic-RVTSO is idempotent, no requirement exists to signal only.
+====
+
+=== Compatibility with RVWMO binaries and libraries
+
+RVWMO binaries and libraries can safely execute, without modification, while running under RVTSO semantics.
+Consequently, no special consideration or guidance is required for these.
+
+=== Discovery
+
+Discovery of Ssdtso is provided exclusively through Unified Discovery.
+
