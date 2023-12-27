@@ -3,7 +3,7 @@ Authors: Dr. Philipp Tomsich (VRULL), Dr. Zhao Siqi (T-Head)
 :docgroup: RISC-V Fast Track
 :description: RISC-V Dynamic Switching of TSO-mode (Ssdtso) extension
 :company: RISC-V.org
-:revdate: 10/2023
+:revdate: 12/2023
 :revnumber: 1.0
 :revremark: This document is under development. Expect potential changes. Visit http://riscv.org/spec-state for further details.
 :revinfo:

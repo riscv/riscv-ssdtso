@@ -1,5 +1,9 @@
 == Revision history
 
+Changes from v1.0-draft2 to v1.0-draft3:
+
+* Allow co-existence of Ssdtso and Ztso
+
 Changes from v1.0-draft1 to v1.0-draft2:
 
 * Changed controlling CSR to `menvcfg`, `henvcfg`, and `senvcfg`.

@@ -20,13 +20,11 @@ The intended use-cases for Ssdtso are
 
 === Dependencies and Incompatibilities
 
-The Ssdto extension conflicts with Ztso.
+For its intended use case (i.e., to provide an provide an on-demand RVTSO execution capability for processors otherwise operating in RVWMO), Ssdtso will be used on cores that do not implement Ztso.
 
-[NOTE]
-====
-Ztso provides RVTSO semantics across all privilege levels and harts of an implementation.
-In contrast to this, Ssdtso assumes that RVWMO is the default (at boot) mode of operation, that individual harts can be switched to RVTSO, and that the M-mode execution environment can not switched to RVTSO.
-====
+However, the Ssdto extension does not conflict with Ztso (i.e., a core that operates in RVTSO mode at all times) and can be implemented on such a core for compatibility:
+ * the RVTSO mode is always-on on Ztso implementations, and
+ * the DTSO bit in `menvcfg`, `senvcfg` and `henvcfg` will accurately reflect whether the core currently operates in RVTSO mode.
 
 [NOTE]
 ====
@@ -37,8 +35,10 @@ To allow the free composition of extensions for unforeseen use-cases, no formal 
 
 === State controlling whether dynamic TSO is enabled
 
-The dynamic-RVTSO behaviour is controlled by bit 8 (`DTSO`) of `menvcfg, senvcfg, henvcfg` for all lower privilege levels.
-Implementations providing Ssdtso are required to default to RVWMO semantics: the bits controlling dynamic-RVTSO behaviour are initialized to 0 on reset.
+The dynamic-RVTSO behaviour is controlled by bit 8 (`DTSO`) of `menvcfg`, `senvcfg`, and `henvcfg` for all lower privilege levels.
+Implementations providing Ssdtso initialize the `DTSO`-bit according to their default memory mode:
+ * implementations that implement only Ssdtso, and not Ztso, default to use RVWMO semantics natively: the bits controlling dynamic-RVTSO behaviour are initialized to 0 on reset
+ * implementations that implement both Ssdtso and Ztso, default to use RVTSO semantics natively: the bits controlling dynamic-RVTSO behaviour are initialized to 1 on reset
 
 If the DTSO control bit in the respective envcfg is set, all lower-privilege modes will operate in dynamic-RVTSO mode:
 [cols="^3,^2,^1,^1,^1,^1,^1",stripes=even,options="header"]
